@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CTCS Monthly Update Agent</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue:   #38B2E3;
+    --dark:   #212121;
+    --pink:   #E91E8C;
+    --light:  #F2F2F1;
+    --bg:     #F7F8FA;
+    --surface:#FFFFFF;
+    --border: #E2E6EA;
+    --border-strong: #C8CDD4;
+    --text:   #1A1D23;
+    --muted:  #6B7280;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .page-wrap {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .brand-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 2rem;
+  }
+  .brand-logo {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--dark);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .brand-logo span {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--blue);
+  }
+  .brand-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .brand-sub   { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  /* Progress */
+  .progress-bar {
+    display: flex; gap: 5px; margin-bottom: 1.75rem;
+  }
+  .pip {
+    height: 3px; border-radius: 2px; flex: 1;
+    background: var(--border); transition: background 0.3s;
+  }
+  .pip.done   { background: var(--blue); }
+  .pip.active { background: var(--pink); }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow);
+  }
+  .card-eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .card-title {
+    font-size: 16px; font-weight: 600; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .card-desc {
+    font-size: 13px; color: var(--muted);
+    line-height: 1.55; margin-bottom: 1.25rem;
+  }
+
+  /* Dept list */
+  .select-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .select-meta span { font-size: 12px; color: var(--muted); }
+  .select-all-btn {
+    font-size: 12px; font-weight: 500; color: var(--blue);
+    background: none; border: none; cursor: pointer; padding: 0;
+  }
+  .select-all-btn:hover { text-decoration: underline; }
+
+  .dept-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .dept-item {
+    display: flex; align-items: center; gap: 13px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    user-select: none;
+  }
+  .dept-item:hover { border-color: var(--blue); background: #F0F9FE; }
+  .dept-item.selected { border-color: var(--blue); background: #EBF7FD; box-shadow: 0 0 0 1px var(--blue); }
+
+  .dept-checkbox {
+    width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0;
+    border: 1.5px solid var(--border-strong);
+    background: var(--surface);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .dept-item.selected .dept-checkbox {
+    background: var(--blue); border-color: var(--blue);
+  }
+  .dept-checkbox i { font-size: 13px; color: white; opacity: 0; transition: opacity 0.1s; }
+  .dept-item.selected .dept-checkbox i { opacity: 1; }
+
+  .dept-icon-wrap {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .dept-item.selected .dept-icon-wrap { background: rgba(56,178,227,0.15); }
+  .dept-icon-wrap i { font-size: 18px; color: var(--muted); }
+  .dept-item.selected .dept-icon-wrap i { color: var(--blue); }
+
+  .dept-text { flex: 1; }
+  .dept-name { font-size: 14px; font-weight: 500; color: var(--text); }
+  .dept-hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Form fields */
+  .field-group { margin-bottom: 1.1rem; }
+  .field-label {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--text); margin-bottom: 5px; line-height: 1.4;
+  }
+  .field-hint { font-size: 12px; color: var(--muted); margin-bottom: 5px; line-height: 1.4; }
+
+  input[type=text], input[type=month], textarea, select {
+    width: 100%;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 9px 11px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(56,178,227,0.15);
+  }
+  textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+
+  /* Dept badge */
+  .dept-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(56,178,227,0.1); color: var(--blue);
+    font-size: 12px; font-weight: 600; padding: 4px 10px;
+    border-radius: 20px; margin-bottom: 12px;
+    border: 1px solid rgba(56,178,227,0.2);
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex; gap: 10px; justify-content: flex-end;
+    margin-top: 1.25rem;
+  }
+  .btn-primary {
+    background: var(--blue); color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 500; padding: 10px 22px;
+    cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    font-family: inherit;
+  }
+  .btn-primary:hover  { opacity: 0.88; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface); color: var(--muted);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 14px; padding: 10px 18px;
+    cursor: pointer; transition: background 0.15s;
+    font-family: inherit;
+  }
+  .btn-secondary:hover { background: var(--bg); }
+
+  /* Review */
+  .review-dept-block {
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .review-dept-block:first-child { border-top: none; padding-top: 0; }
+  .review-dept-title {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    margin-bottom: 8px;
+  }
+  .review-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 7px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .review-row:last-child { border-bottom: none; }
+  .review-key { color: var(--muted); min-width: 160px; flex-shrink: 0; }
+  .review-val { color: var(--text); line-height: 1.5; }
+  .review-empty { color: var(--muted); font-style: italic; }
+
+  /* Status / generating */
+  .status-bar {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--muted);
+    margin-top: 1rem; box-shadow: var(--shadow);
+  }
+  .spinner {
+    width: 15px; height: 15px; flex-shrink: 0;
+    border: 2px solid var(--border);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Success */
+  .success-box {
+    background: #F0FDF4; border: 1px solid #86EFAC;
+    border-radius: var(--radius-sm); padding: 1rem 1.25rem;
+    margin-top: 1rem; display: flex; align-items: center; gap: 10px;
+  }
+  .success-box i { color: #16A34A; font-size: 20px; }
+  .success-box a { color: #16A34A; font-weight: 500; font-size: 13px; }
+
+  /* Done list */
+  .done-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .done-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .done-row i.ti-circle-check { color: #16A34A; }
+  .done-row i.ti-circle-dashed { color: var(--muted); }
+
+  /* Step counter pill */
+  .step-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 11px; color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .step-pill i { font-size: 12px; color: var(--blue); }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="brand-header">
+    <div class="brand-logo"><span></span></div>
+    <div>
+      <div class="brand-title">CTCS Monthly Update Agent</div>
+      <div class="brand-sub">Corporate Technology Customer Success · ANZ</div>
+    </div>
+  </div>
+  <div id="app"></div>
+</div>
+
+<script>
+const DEPTS = [
+  { id: 'dd',   name: 'Deployment & Delivery', icon: 'ti-rocket',   hint: 'Projects, pipeline, delivery stats' },
+  { id: 'auto', name: 'Automation',             icon: 'ti-robot',    hint: 'UiPath, Power Platform, accuracy' },
+  { id: 'ms',   name: 'M&S',                    icon: 'ti-headset',  hint: 'Support, SLA, case volumes' },
+  { id: 'sme',  name: 'SME Onboarding',         icon: 'ti-users',    hint: 'CT, FCBT, Stage & Screen' },
+  { id: 'lms',  name: 'LMS Onboarding',         icon: 'ti-building', hint: 'FCM enterprise onboarding' },
+];
+
+const QUESTIONS = {
+  dd: {
+    title: 'Deployment & Delivery',
+    blurb_hint: 'e.g. "Strong month — Workspace Quote Wave 2 launched, Asia SOM planning underway."',
+    fields: [
+      { id: 'projects_fytd',        label: 'Projects Completed FYTD',   hint: 'Running total for the financial year', placeholder: '42' },
+      { id: 'active_projects',      label: 'Active Projects',            hint: 'Projects currently in flight',         placeholder: '25' },
+      { id: 'in_pilot',             label: 'In Pilot / Testing',         hint: 'Projects being validated',             placeholder: '2'  },
+      { id: 'delivery_rate',        label: 'Delivery Success Rate',      hint: 'e.g. 100%',                            placeholder: '100%' },
+      { id: 'completed_highlights', label: 'Completed highlights',       hint: 'Comma-separated project names',        placeholder: 'NDC Wave 3, Workspace Quote Wave 1 & 2, ...' },
+      { id: 'active_list',          label: 'Currently active projects',  hint: 'Key active projects',                  placeholder: 'Asia SOM, Expense Integration, GOOL, ...' },
+    ]
+  },
+  auto: {
+    title: 'Automation',
+    blurb_hint: 'e.g. "17K+ items processed with 90% accuracy. Clark stabilisation continues to drive uplift."',
+    fields: [
+      { id: 'tasks_automated',  label: 'Tasks Automated this month', placeholder: '4' },
+      { id: 'task_names',       label: 'Task names',                 hint: 'Comma-separated', placeholder: 'Admin/OBW Checks, M&E Rooming List, ...' },
+      { id: 'items_processed',  label: 'Items Processed',            placeholder: '17,348' },
+      { id: 'accuracy_rate',    label: 'Accuracy Rate',              placeholder: '90%' },
+      { id: 'accuracy_comment', label: 'Accuracy rate context',      placeholder: '+10% vs target. Clark stabilisation driving uplift' },
+      { id: 'prodops_pct',      label: '% by ProdOps',               placeholder: '30%' },
+      { id: 'onboarding_pct',   label: '% by Onboarding',            placeholder: '50%' },
+      { id: 'support_pct',      label: '% by Support',               placeholder: '20%' },
+      { id: 'platform_breakdown', label: 'Platform breakdown',       placeholder: 'Serko: 90  ·  Lumina: 169  ·  Agentport: 84' },
+    ]
+  },
+  ms: {
+    title: 'M&S',
+    blurb_hint: 'e.g. "SLA holding strong. Offshore team exceeding 60% case closure goal at 76.9%."',
+    fields: [
+      { id: 'sla_pct',         label: 'SLA %',                          placeholder: '92%' },
+      { id: 'sla_comment',     label: 'SLA context / note',             placeholder: 'Slight dip due to 2 planned interruptions' },
+      { id: 'onshore_cases',   label: 'Onshore Cases Resolved',         placeholder: '18,391' },
+      { id: 'offshore_cases',  label: 'Offshore Cases Resolved',        placeholder: '14,142' },
+      { id: 'offshore_pct',    label: 'Offshore % of ANZ cases',        placeholder: '76.9%' },
+      { id: 'phone_calls',     label: 'Phone Calls Received',           placeholder: '1,903' },
+      { id: 'project_hours',   label: 'Project Work Hours',             placeholder: '791' },
+      { id: 'cases_automated', label: 'Cases Automated (cumulative)',   placeholder: '13,957' },
+    ]
+  },
+  sme: {
+    title: 'SME Onboarding',
+    blurb_hint: 'e.g. "CSAT holding at 4.75+. Strong new customer numbers in AU and NZ."',
+    fields: [
+      { id: 'csat_au',    label: 'CSAT — AU',                    placeholder: '4.75' },
+      { id: 'csat_nz',    label: 'CSAT — NZ',                    placeholder: '4.76' },
+      { id: 'ct_ret_au',  label: 'CT Retention (6-mo) AU',       placeholder: '95%' },
+      { id: 'ct_ret_nz',  label: 'CT Retention (6-mo) NZ',       placeholder: '98%' },
+      { id: 'ct_new_au',  label: 'CT New Customers AU',          placeholder: '351' },
+      { id: 'ct_new_nz',  label: 'CT New Customers NZ',          placeholder: '80' },
+      { id: 'ct_ttv_au',  label: 'CT TTV AU',                    placeholder: '$121M' },
+      { id: 'ct_ttv_nz',  label: 'CT TTV NZ',                    placeholder: '$20M' },
+      { id: 'ct_opt_au',  label: 'CT Existing Optimisation AU',  placeholder: '208' },
+      { id: 'ct_opt_nz',  label: 'CT Existing Optimisation NZ',  placeholder: '16' },
+      { id: 'ct_rev_au',  label: 'CT Onboarding Revenue AU',     placeholder: '$575K' },
+      { id: 'ct_rev_nz',  label: 'CT Onboarding Revenue NZ',     placeholder: '$76K' },
+      { id: 'fcbt_ret',   label: 'FCBT Retention',               placeholder: '86%' },
+      { id: 'fcbt_new',   label: 'FCBT New Customers',           placeholder: '214' },
+      { id: 'fcbt_ttv',   label: 'FCBT TTV',                     placeholder: '$29M' },
+      { id: 'ss_ret',     label: 'Stage & Screen Retention',     placeholder: '76%' },
+      { id: 'ss_new',     label: 'Stage & Screen New Customers', placeholder: '67' },
+      { id: 'ss_ttv',     label: 'Stage & Screen TTV',           placeholder: '$32M' },
+      { id: 'ss_opt',     label: 'Stage & Screen Existing Opt.', placeholder: '9' },
+    ]
+  },
+  lms: {
+    title: 'LMS Onboarding',
+    blurb_hint: 'e.g. "CSAT lifted to 4.7. 8 new customers live bringing $12M TTV."',
+    fields: [
+      { id: 'csat',                   label: 'CSAT score',                       placeholder: '4.7' },
+      { id: 'csat_travel_confidence', label: 'Confident about travel program',   placeholder: '4.3' },
+      { id: 'csat_sales_aligned',     label: 'Aligned to sales promise',         placeholder: '4.5' },
+      { id: 'csat_time',              label: 'Reasonable time to onboard',       placeholder: '4.5' },
+      { id: 'new_live',               label: 'New Customers Live this month',    placeholder: '8' },
+      { id: 'new_ttv',                label: 'TTV from new customers',           placeholder: '$12M' },
+      { id: 'in_progress',            label: 'Projects In Progress',             placeholder: '30' },
+      { id: 'in_progress_ttv',        label: 'TTV of in-progress projects',      placeholder: '$35M' },
+      { id: 'pipeline_ttv',           label: 'Pipeline TTV waiting to commence', placeholder: '$31M' },
+      { id: 'avg_days',               label: 'Avg Days to Onboard',              placeholder: '60' },
+      { id: 'fcm_new_au',             label: 'FCM New Customers AU',             placeholder: '51' },
+      { id: 'fcm_new_nz',             label: 'FCM New Customers NZ',             placeholder: '12' },
+      { id: 'fcm_exist_au',           label: 'FCM Existing AU',                  placeholder: '65' },
+      { id: 'fcm_exist_nz',           label: 'FCM Existing NZ',                  placeholder: '5' },
+      { id: 'fcm_ttv_new_au',         label: 'FCM TTV New AU',                   placeholder: '$126M' },
+      { id: 'fcm_ttv_new_nz',         label: 'FCM TTV New NZ',                   placeholder: '$22.6M' },
+      { id: 'fcm_ttv_exist_au',       label: 'FCM TTV Existing AU',              placeholder: '$11.2M' },
+      { id: 'fcm_ttv_exist_nz',       label: 'FCM TTV Existing NZ',              placeholder: '$350K' },
+      { id: 'highlights',             label: 'Star highlights / wins',           hint: 'Key achievements this month', placeholder: 'AECOM automation saving ~4hrs/week  ·  NSWG SAP Concur commenced' },
+      { id: 'revenue_invoiced',       label: 'Revenue invoiced',                 placeholder: '$105K' },
+    ]
+  }
+};
+
+const DEPT_NAMES = { dd:'Deployment & Delivery', auto:'Automation', ms:'M&S', sme:'SME Onboarding', lms:'LMS Onboarding' };
+
+const state = {
+  phase: 'meta',
+  month: '',
+  selectedDepts: [],
+  currentDeptIdx: 0,
+  deptData: {},
+  completedDepts: [],
+  status: '',
+};
+
+function getMonthLabel(val) {
+  if (!val) return '';
+  const [y, m] = val.split('-');
+  return new Date(+y, +m - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+}
+
+function render() {
+  const app = document.getElementById('app');
+  const total = 2 + state.selectedDepts.length + 1;
+  const current = state.phase === 'meta' ? 0
+    : state.phase === 'dept-select' ? 1
+    : state.phase === 'dept-form'   ? 2 + state.currentDeptIdx
+    : state.phase === 'review'      ? total - 1
+    : total;
+
+  let h = '';
+
+  // Progress bar
+  if (!['done','generating'].includes(state.phase)) {
+    const n = Math.max(4, total);
+    h += '<div class="progress-bar">';
+    for (let i = 0; i < n; i++) {
+      const cls = i < current ? 'done' : i === current ? 'active' : '';
+      h += `<div class="pip ${cls}"></div>`;
+    }
+    h += '</div>';
+  }
+
+  // ── PHASE: meta ──────────────────────────────────────────
+  if (state.phase === 'meta') {
+    h += `<div class="card">
+      <div class="card-eyebrow">Step 1 — Reporting period</div>
+      <div class="card-title">Which month is this update for?</div>
+      <div class="card-desc">Select the month and year before filling in any department data.</div>
+      <div class="field-group">
+        <label class="field-label">Month</label>
+        <input type="month" id="month-input" value="${state.month}" />
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn-primary" id="meta-next">Next →</button></div>`;
+  }
+
+  // ── PHASE: dept-select ───────────────────────────────────
+  else if (state.phase === 'dept-select') {
+    const allSel = state.selectedDepts.length === DEPTS.length;
+    h += `<div class="card">
+      <div class="card-eyebrow">Step 2 — Departments</div>
+      <div class="card-title">Which departments are you filling in?</div>
+      <div class="card-desc">Select all that apply. You'll fill in each one in turn before the PPTX is generated.</div>
+      <div class="select-meta">
+        <span>${state.selectedDepts.length} of ${DEPTS.length} selected</span>
+        <button class="select-all-btn" id="select-all-btn">${allSel ? 'Deselect all' : 'Select all'}</button>
+      </div>
+      <div class="dept-list">`;
+
+    DEPTS.forEach(d => {
+      const sel = state.selectedDepts.includes(d.id) ? 'selected' : '';
+      h += `<div class="dept-item ${sel}" data-dept="${d.id}">
+        <div class="dept-checkbox"><i class="ti ti-check"></i></div>
+        <div class="dept-icon-wrap"><i class="ti ${d.icon}"></i></div>
+        <div class="dept-text">
+          <div class="dept-name">${d.name}</div>
+          <div class="dept-hint">${d.hint}</div>
+        </div>
+      </div>`;
+    });
+
+    h += `</div></div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="back-meta">← Back</button>
+      <button class="btn-primary" id="dept-next" ${state.selectedDepts.length === 0 ? 'disabled' : ''}>
+        Continue (${state.selectedDepts.length} selected) →
+      </button>
+    </div>`;
+  }
+
+  // ── PHASE: dept-form ─────────────────────────────────────
+  else if (state.phase === 'dept-form') {
+    const deptId = state.selectedDepts[state.currentDeptIdx];
+    const def    = QUESTIONS[deptId];
+    const saved  = state.deptData[deptId] || {};
+    const stepN  = 3 + state.currentDeptIdx;
+    const totalN = 2 + state.selectedDepts.length + 1;
+    const remaining = state.selectedDepts.length - state.currentDeptIdx - 1;
+
+    // Mini progress showing which depts are done
+    h += `<div class="dept-badge"><i class="ti ti-layout-cards"></i>${def.title}</div>`;
+
+    // Dept checklist pill strip
+    h += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">`;
+    state.selectedDepts.forEach((id, i) => {
+      const isDone = i < state.currentDeptIdx;
+      const isCurrent = i === state.currentDeptIdx;
+      const bg = isDone ? '#EBF7FD' : isCurrent ? 'rgba(233,30,140,0.08)' : '#F7F8FA';
+      const border = isDone ? '1px solid #38B2E3' : isCurrent ? '1px solid #E91E8C' : '1px solid #E2E6EA';
+      const color = isDone ? '#38B2E3' : isCurrent ? '#E91E8C' : '#9CA3AF';
+      const icon = isDone ? 'ti-circle-check' : isCurrent ? 'ti-circle-dot' : 'ti-circle-dashed';
+      h += `<div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;background:${bg};border:${border};color:${color};">
+        <i class="ti ${icon}" style="font-size:12px;"></i>${DEPT_NAMES[id]}
+      </div>`;
+    });
+    h += `</div>`;
+
+    h += `<div class="card">
+      <div class="card-eyebrow">Step ${stepN} of ${totalN} · Executive summary blurb</div>
+      <div class="card-title">Monthly summary for the exec slide</div>
+      <div class="card-desc">This appears on slide 2 next to your department name.</div>
+      <div class="field-group">
+        <label class="field-label">Blurb</label>
+        <div class="field-hint">Hint: ${def.blurb_hint}</div>
+        <textarea id="field-blurb" placeholder="Write your 1–2 sentence monthly blurb here...">${saved.blurb || ''}</textarea>
+      </div>
+    </div>`;
+
+    h += `<div class="card">
+      <div class="card-eyebrow">Metrics & data</div>
+      <div class="card-title">Fill in the numbers for your slide</div>
+      <div class="card-desc">Leave any blank to carry forward the template default.</div>`;
+    def.fields.forEach(f => {
+      h += `<div class="field-group">
+        <label class="field-label" for="field-${f.id}">${f.label}</label>
+        ${f.hint ? `<div class="field-hint">${f.hint}</div>` : ''}
+        <input type="text" id="field-${f.id}" placeholder="${f.placeholder}" value="${saved[f.id] || ''}" />
+      </div>`;
+    });
+    h += `</div>`;
+
+    const nextLabel = remaining > 0
+      ? `Save & next: ${DEPT_NAMES[state.selectedDepts[state.currentDeptIdx + 1]]} →`
+      : 'Save & review →';
+
+    h += `<div class="btn-row">
+      <button class="btn-secondary" id="back-dept">← Back</button>
+      <button class="btn-primary" id="save-dept">${nextLabel}</button>
+    </div>`;
+  }
+
+  // ── PHASE: review ────────────────────────────────────────
+  else if (state.phase === 'review') {
+    h += `<div class="card">
+      <div class="card-eyebrow">Review · ${getMonthLabel(state.month)}</div>
+      <div class="card-title">All departments complete — ready to generate</div>
+      <div class="card-desc">Check your entries below. The PPTX will be generated once you confirm.</div>`;
+
+    state.selectedDepts.forEach((deptId, i) => {
+      const def   = QUESTIONS[deptId];
+      const saved = state.deptData[deptId] || {};
+      h += `<div class="review-dept-block" ${i === 0 ? '' : 'style="margin-top:12px"'}>
+        <div class="review-dept-title">${def.title}</div>
+        <div class="review-row">
+          <span class="review-key">Blurb</span>
+          <span class="review-val">${saved.blurb || '<span class="review-empty">not set</span>'}</span>
+        </div>`;
+      def.fields.slice(0, 3).forEach(f => {
+        h += `<div class="review-row">
+          <span class="review-key">${f.label}</span>
+          <span class="review-val">${saved[f.id] || '<span class="review-empty">template default</span>'}</span>
+        </div>`;
+      });
+      h += `<div class="review-row">
+        <span class="review-key review-empty">+ ${def.fields.length - 3} more fields</span>
+        <span></span>
+      </div></div>`;
+    });
+
+    h += `</div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="back-review">← Edit</button>
+      <button class="btn-primary" id="generate-btn">Generate PPTX ↗</button>
+    </div>`;
+  }
+
+  // ── PHASE: generating ────────────────────────────────────
+  else if (state.phase === 'generating') {
+    h += `<div class="card">
+      <div class="card-eyebrow">Generating</div>
+      <div class="card-title">Building your presentation...</div>
+      <div class="card-desc">Applying your data to the CTCS template. This takes a few seconds.</div>
+    </div>
+    <div class="status-bar"><div class="spinner"></div><span id="gen-status">${state.status}</span></div>`;
+  }
+
+  // ── PHASE: done ──────────────────────────────────────────
+  else if (state.phase === 'done') {
+    h += `<div class="card">
+      <div class="card-eyebrow">Complete · ${getMonthLabel(state.month)}</div>
+      <div class="card-title">Your presentation data is ready</div>
+      <div class="card-desc">Copy the JSON payload below and paste it to Claude to generate the final PPTX file.</div>
+      <div class="done-list">`;
+    DEPTS.forEach(d => {
+      const done = state.selectedDepts.includes(d.id);
+      h += `<div class="done-row">
+        <i class="ti ${done ? 'ti-circle-check' : 'ti-circle-dashed'}"></i>
+        <span>${d.name}</span>
+      </div>`;
+    });
+    h += `</div>
+      <hr class="divider" />
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">PPTX DATA PAYLOAD</div>
+      <textarea id="payload-output" style="font-size:11px;font-family:monospace;min-height:100px;background:#F7F8FA;" readonly>${JSON.stringify({ month: getMonthLabel(state.month), selectedDepts: state.selectedDepts, deptData: state.deptData }, null, 2)}</textarea>
+      <button class="btn-primary" id="copy-btn" style="margin-top:10px;width:100%;">Copy payload</button>
+    </div>
+    <div class="btn-row" style="margin-top:1rem;">
+      <button class="btn-secondary" id="start-over">Start over</button>
+    </div>`;
+  }
+
+  app.innerHTML = h;
+  attachHandlers();
+}
+
+function collectForm(deptId) {
+  const def  = QUESTIONS[deptId];
+  const data = {};
+  const el   = document.getElementById('field-blurb');
+  if (el) data.blurb = el.value.trim();
+  def.fields.forEach(f => {
+    const input = document.getElementById(`field-${f.id}`);
+    if (input) data[f.id] = input.value.trim();
+  });
+  return data;
+}
+
+function attachHandlers() {
+  const $ = id => document.getElementById(id);
+
+  if (state.phase === 'meta') {
+    $('meta-next').onclick = () => {
+      const v = $('month-input').value;
+      if (!v) { $('month-input').focus(); return; }
+      state.month = v;
+      state.phase = 'dept-select';
+      render();
+    };
+  }
+
+  if (state.phase === 'dept-select') {
+    document.querySelectorAll('.dept-item').forEach(item => {
+      item.onclick = () => {
+        const id = item.dataset.dept;
+        state.selectedDepts = state.selectedDepts.includes(id)
+          ? state.selectedDepts.filter(d => d !== id)
+          : [...state.selectedDepts, id];
+        render();
+      };
+    });
+    $('select-all-btn').onclick = (e) => {
+      e.stopPropagation();
+      state.selectedDepts = state.selectedDepts.length === DEPTS.length ? [] : DEPTS.map(d => d.id);
+      render();
+    };
+    $('dept-next').onclick = () => {
+      if (!state.selectedDepts.length) return;
+      state.currentDeptIdx = 0;
+      state.phase = 'dept-form';
+      render();
+    };
+    $('back-meta').onclick = () => { state.phase = 'meta'; render(); };
+  }
+
+  if (state.phase === 'dept-form') {
+    $('save-dept').onclick = () => {
+      const id = state.selectedDepts[state.currentDeptIdx];
+      state.deptData[id] = collectForm(id);
+      if (state.currentDeptIdx < state.selectedDepts.length - 1) {
+        state.currentDeptIdx++;
+        render();
+      } else {
+        state.phase = 'review';
+        render();
+      }
+    };
+    $('back-dept').onclick = () => {
+      if (state.currentDeptIdx > 0) { state.currentDeptIdx--; render(); }
+      else { state.phase = 'dept-select'; render(); }
+    };
+  }
+
+  if (state.phase === 'review') {
+    $('generate-btn').onclick = () => {
+      state.phase = 'done';
+      render();
+    };
+    $('back-review').onclick = () => {
+      state.currentDeptIdx = state.selectedDepts.length - 1;
+      state.phase = 'dept-form';
+      render();
+    };
+  }
+
+  if (state.phase === 'done') {
+    $('copy-btn').onclick = () => {
+      const ta = $('payload-output');
+      ta.select();
+      document.execCommand('copy');
+      $('copy-btn').textContent = 'Copied ✓';
+      setTimeout(() => { $('copy-btn').textContent = 'Copy payload'; }, 2000);
+    };
+    $('start-over').onclick = () => {
+      Object.assign(state, { phase:'meta', month:'', selectedDepts:[], currentDeptIdx:0, deptData:{}, completedDepts:[] });
+      render();
+    };
+  }
+}
+
+render();
+</script>
+</body>
+</html>
